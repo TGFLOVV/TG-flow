@@ -1,0 +1,2000 @@
+import {
+  users,
+  channels,
+  categories,
+  channelApplications,
+  ratings,
+  channelViews,
+  bots,
+  groups,
+  news,
+  notifications,
+  payments,
+  withdrawalRequests,
+  supportMessages,
+  supportFiles,
+
+  type User,
+  type Channel,
+  type Category,
+  type ChannelApplication,
+  type Bot,
+  type Group,
+  type News,
+  type Notification,
+  type Payment,
+  type WithdrawalRequest,
+
+  type InsertUser,
+  type InsertChannel,
+  type InsertCategory,
+  type InsertChannelApplication,
+  type InsertBot,
+  type InsertGroup,
+  type InsertNews,
+  type InsertNotification,
+  type InsertPayment,
+  type InsertWithdrawalRequest,
+  type SupportFile,
+  type InsertSupportFile,
+
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, desc, count, and, sql, avg, lt, gte, isNotNull, ne, asc } from "drizzle-orm";
+import { users as usersTable } from "@shared/schema"; // Import users table
+import bcrypt from 'bcrypt'; // Import bcrypt
+
+// Interface for storage operations
+export interface IStorage {
+  // User operations
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
+  getAllUsers(): Promise<User[]>;
+  updateUserBalance(userId: number, amount: string): Promise<User>;
+  updateUserStatus(userId: number, status: string): Promise<User>;
+  updateUserSettings(userId: number, settings: { starfieldEnabled?: boolean }): Promise<User>;
+  updateUserAvatar(userId: number, profileImageUrl: string): Promise<User>;
+  getUserTopupHistory(userId: number): Promise<Payment[]>;
+
+  // Category operations
+  getCategories(): Promise<Category[]>;
+  createCategory(category: InsertCategory): Promise<Category>;
+
+  // Channel operations
+  getChannels(limit?: number, categoryId?: number, type?: string): Promise<(Channel & { category: Category; owner: User })[]>;
+  getChannelById(id: number): Promise<(Channel & { category: Category; owner: User }) | undefined>;
+  getChannelsByOwner(ownerId: number): Promise<(Channel & { category: Category; owner: User })[]>;
+  createChannel(channel: InsertChannel): Promise<Channel>;
+  updateChannelStatus(id: number, status: string): Promise<Channel>;
+  updateChannel(id: number, updates: Partial<Channel>): Promise<Channel>;
+  promoteChannelToTop(id: number, durationDays: number): Promise<Channel>;
+  promoteChannelToUltraTop(id: number, durationDays: number): Promise<Channel>;
+  deleteChannel(id: number): Promise<void>;
+  getChannelsByUser(userId: number): Promise<(Channel & { category: Category })[]>;
+  cleanupExpiredPromotions(): Promise<void>;
+  getChannelByUsername(username: string): Promise<Channel | null>;
+  getChannelsWithBotAdmin(): Promise<Channel[]>;
+
+  // Channel application operations
+  getApplications(status?: string): Promise<(ChannelApplication & { category: Category; applicant: User })[]>;
+  createApplication(application: InsertChannelApplication): Promise<ChannelApplication>;
+  updateApplicationStatus(id: number, status: string, reviewerId: number, rejectionReason?: string): Promise<ChannelApplication>;
+
+  // Payment operations
+  createPayment(payment: InsertPayment): Promise<Payment>;
+
+  // Rating operations
+  rateChannel(channelId: number, userId: number, rating: number): Promise<void>;
+  getChannelRating(channelId: number): Promise<{ averageRating: number; totalRatings: number }>;
+
+  // View operations
+  addChannelView(channelId: number, userId: number): Promise<void>;
+  getChannelViews(channelId: number): Promise<number>;
+  getChannelViews24h(channelId: number): Promise<number>;
+
+  // Stats operations
+  getStats(): Promise<{
+    totalChannels: number;
+    totalUsers: number;
+    pendingApplications: number;
+    totalRevenue: string;
+  }>;
+
+  updateUserProfile(userId: number, profileData: { firstName?: string, lastName?: string }): Promise<User>;
+  updateUserEmail(userId: number, email: string): Promise<User>;
+
+  getUserByEmail(email: string): Promise<User | undefined>;
+  updateUserRole(userId: number, role: string): Promise<User>;
+
+  // Bot operations
+  getBots(limit?: number, categoryId?: number): Promise<(Bot & { category: Category; owner: User })[]>;
+  getBotById(id: number): Promise<(Bot & { category: Category; owner: User }) | undefined>;
+  createBot(bot: InsertBot): Promise<Bot>;
+  updateBot(id: number, updates: Partial<Bot>): Promise<Bot>;
+  deleteBot(id: number): Promise<void>;
+
+  // Group operations
+  getGroups(limit?: number, categoryId?: number): Promise<(Group & { category: Category; owner: User })[]>;
+  getGroupById(id: number): Promise<(Group & { category: Category; owner: User }) | undefined>;
+  createGroup(group: InsertGroup): Promise<Group>;
+  updateGroup(id: number, updates: Partial<Group>): Promise<Group>;
+  deleteGroup(id: number): Promise<void>;
+
+  // News operations
+  getNews(limit?: number): Promise<(News & { author: User })[]>;
+  getNewsById(id: number): Promise<(News & { author: User }) | undefined>;
+  createNews(news: InsertNews): Promise<News>;
+  updateNews(id: number, updates: Partial<News>): Promise<News>;
+  deleteNews(id: number): Promise<void>;
+
+  // Landing stats
+  getLandingStats(): Promise<{
+    totalChannels: number;
+    totalUsers: number;
+    totalCategories: number;
+  }>;
+
+  getUserTopups(userId: number): Promise<Payment[]>;
+  getTopups(status?: string): Promise<Payment[]>;
+
+  getUserApplications(userId: number): Promise<ChannelApplication[]>;
+  getUserApplicationsByStatus(userId: number, status: string): Promise<ChannelApplication[]>;
+
+  getUserChannels(userId: number): Promise<any[]>;
+
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  getUserByTelegramId(telegramId: string): Promise<User | undefined>;
+  updateUserGoogleId(userId: number, googleId: string): Promise<User>;
+  updateUserTelegramData(userId: number, telegramData: {
+    telegramId: string;
+    telegramUsername?: string;
+    telegramFirstName?: string;
+    telegramLastName?: string;
+    telegramPhotoUrl?: string;
+  }): Promise<User>;
+  createUserFromTelegram(telegramData: {
+    telegramId: string;
+    telegramUsername?: string;
+    telegramFirstName?: string;
+    telegramLastName?: string;
+    telegramPhotoUrl?: string;
+  }): Promise<User>;
+
+  // Notification operations
+  getNotifications(userId: number): Promise<Notification[]>;
+  createNotification(notification: InsertNotification): Promise<Notification>;
+  markNotificationAsRead(notificationId: number): Promise<void>;
+  markAllNotificationsAsRead(userId: number): Promise<void>;
+  getUnreadNotificationCount(userId: number): Promise<number>;
+
+  // Password reset operations
+  savePasswordResetCode(userId: number, code: string): Promise<boolean>;
+  verifyPasswordResetCode(code: string, newPassword: string): Promise<{ success: boolean; error?: string }>;
+
+  // User statistics operations
+  getUserStatistics(userId: number): Promise<{
+    totalChannels: number;
+    totalBots: number;
+    totalGroups: number;
+    totalPublications: number;
+    totalViews: number;
+    viewsThisMonth: number;
+    totalSubscribers: number;
+    totalEarnings: string;
+    approvedApplications: number;
+    pendingApplications: number;
+    rejectedApplications: number;
+    avgRating: number;
+    joinedDate: string;
+  }>;
+
+  // Withdrawal requests
+  createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest>;
+  getWithdrawalRequests(status?: string): Promise<WithdrawalRequest[]>;
+  getUserWithdrawalRequests(userId: number): Promise<WithdrawalRequest[]>;
+  updateWithdrawalRequestStatus(requestId: number, status: string, processedBy: number, rejectionReason?: string): Promise<WithdrawalRequest>;
+
+
+  // Broadcast operations
+  getBroadcastStats(): Promise<{
+    totalUsers: number;
+    emailUsers: number;
+    telegramUsers: number;
+  }>;
+  getUsersForEmailBroadcast(): Promise<User[]>;
+  getUsersForTelegramBroadcast(): Promise<User[]>;
+
+    // Support operations
+    getSupportMessages(userId: number): Promise<any[]>;
+    getSupportChats(): Promise<any[]>;
+    getSupportChatById(chatId: string): Promise<any | null>;
+    getUnreadSupportCount(userId: number): Promise<number>;
+    createSupportMessage(data: {
+        userId: number;
+        message: string;
+        isFromAdmin: boolean;
+        chatId: string;
+        adminUserId?: number;
+    }): Promise<any>;
+    markSupportMessagesAsRead(userId: number, chatId: string): Promise<void>;
+
+    // Support file operations
+    createSupportFile(fileData: InsertSupportFile): Promise<SupportFile>;
+    getSupportFile(filename: string): Promise<SupportFile | null>;
+    getSupportFileByMessageId(messageId: number): Promise<SupportFile | null>;
+
+    // Support chat resolution
+    resolveSupportChat(chatId: string): Promise<void>;
+}
+
+export class DatabaseStorage implements IStorage {
+  // User operations
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    if (!email || !email.trim()) {
+      return undefined;
+    }
+
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email.toLowerCase().trim()))
+      .limit(1);
+    return user;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
+    return user;
+  }
+
+  async getUserByTelegramId(telegramId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.telegramId, telegramId));
+    return user;
+  }
+
+  async updateUserGoogleId(userId: number, googleId: string): Promise<User> {
+    const [user] = await db.update(users)
+      .set({ googleId, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      ;
+    return user;
+  }
+
+
+
+  async updateUserRole(userId: number, role: string): Promise<User> {
+    await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user;
+  }
+
+  async updateUserTelegramData(userId: number, telegramData: {
+    telegramId: string;
+    telegramUsername?: string;
+    telegramFirstName?: string;
+    telegramLastName?: string;
+    telegramPhotoUrl?: string;
+  }): Promise<User> {
+    console.log('🔄 Updating Telegram data for user:', userId, telegramData);
+
+    const updateData: any = {
+      telegramId: telegramData.telegramId,
+      updatedAt: new Date()
+    };
+
+    if (telegramData.telegramUsername) updateData.telegramUsername = telegramData.telegramUsername;
+    if (telegramData.telegramFirstName) updateData.telegramFirstName = telegramData.telegramFirstName;
+    if (telegramData.telegramLastName) updateData.telegramLastName = telegramData.telegramLastName;
+    if (telegramData.telegramPhotoUrl) {
+      updateData.telegramPhotoUrl = telegramData.telegramPhotoUrl;
+      updateData.profileImageUrl = telegramData.telegramPhotoUrl; // Устанавливаем аватарку
+    }
+
+    const [user] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      ;
+
+    console.log('✅ Updated user:', {
+      id: user?.id,
+      telegramId: user?.telegramId,
+      telegramUsername: user?.telegramUsername
+    });
+
+    return user;
+  }
+
+  async createUserFromTelegram(telegramData: {
+    telegramId: string;
+    telegramUsername?: string;
+    telegramFirstName?: string;
+    telegramLastName?: string;
+    telegramPhotoUrl?: string;
+  }): Promise<User> {
+    const username = telegramData.telegramUsername || `user_${telegramData.telegramId}`;
+    const firstName = telegramData.telegramFirstName || '';
+    const lastName = telegramData.telegramLastName || '';
+
+    const userData: InsertUser = {
+      username,
+      email: '',
+      password: '',
+      firstName,
+      lastName,
+      telegramId: telegramData.telegramId,
+      telegramUsername: telegramData.telegramUsername,
+      telegramFirstName: telegramData.telegramFirstName,
+      telegramLastName: telegramData.telegramLastName,
+      telegramPhotoUrl: telegramData.telegramPhotoUrl,
+      profileImageUrl: telegramData.telegramPhotoUrl || undefined,
+      role: 'user',
+      status: 'active',
+      balance: '0.00'
+    };
+
+    await db.insert(users).values(userData);
+    const [user] = await db.select().from(users).where(eq(users.username, userData.username));
+    return user;
+  }
+
+  async createUser(userData: InsertUser): Promise<User> {
+    await db.insert(users).values(userData);
+    const [user] = await db.select().from(users).where(eq(users.username, userData.username));
+    return user;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users).orderBy(desc(users.createdAt));
+  }
+
+  async updateUserStatus(userId: number, status: string): Promise<User> {
+    await db
+      .update(users)
+      .set({ 
+        updatedAt: sql`NOW()`
+      })
+      .where(eq(users.id, userId));
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    return user;
+  }
+
+  async updateUserSettings(userId: number, settings: {}): Promise<User> {
+    const updateData: any = {
+      updatedAt: new Date()
+    };
+
+    const [user] = await db
+      .update(users)
+      .set(updateData)
+      .where(eq(users.id, userId))
+      ;
+    return user;
+  }
+
+  async updateUserAvatar(userId: number, profileImageUrl: string): Promise<User> {
+    console.log('💾 updateUserAvatar - Input:', {
+      userId,
+      profileImageUrlLength: profileImageUrl?.length || 0,
+      profileImageUrlPreview: profileImageUrl?.substring(0, 50) + '...'
+    });
+
+    await db
+      .update(users)
+      .set({ profileImageUrl, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+
+    console.log('💾 updateUserAvatar - Result:', {
+      userId: user?.id,
+      hasProfileImage: !!user?.profileImageUrl,
+      profileImageUrlLength: user?.profileImageUrl?.length || 0
+    });
+
+    return user;
+  }
+
+  async updateUserPassword(userId: number, hashedPassword: string): Promise<User> {
+    await db
+      .update(users)
+      .set({ password: hashedPassword, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    const [updatedUser] = await db.select().from(users).where(eq(users.id, userId));
+    return updatedUser;
+  }
+
+  async getUserTopupHistory(userId: number): Promise<Payment[]> {
+    return await db
+      .select()
+      .from(payments)
+      .where(eq(payments.userId, userId))
+      .orderBy(desc(payments.createdAt));
+  }
+
+  // Category operations
+  async getCategories(): Promise<Category[]> {
+    return await db.select().from(categories).orderBy(categories.name);
+  }
+
+  async createCategory(category: InsertCategory): Promise<Category> {
+    await db.insert(categories).values(category);
+    const [newCategory] = await db.select().from(categories).where(eq(categories.name, category.name));
+    return newCategory;
+  }
+
+    async cleanupExpiredPromotions(): Promise<void> {
+    const now = new Date();
+
+    // TOP статусы теперь не истекают по времени, они остаются до ручного удаления
+    // Убираем только истекшие ULTRA TOP статусы
+
+    // Убираем истекшие ULTRA TOP статусы
+    await db
+      .update(channels)
+      .set({ 
+        isUltraTop: false,
+        ultraTopExpiresAt: null,
+        updatedAt: now
+      })
+      .where(
+        sql`${channels.isUltraTop} = true AND ${channels.ultraTopExpiresAt} < ${now}`
+      );
+  }
+
+  // Channel operations
+  async getChannels(limit = 50, categoryId?: number, type?: string): Promise<(Channel & { category: Category; owner: User })[]> {
+      // Очищаем истекшие продвижения
+    await this.cleanupExpiredPromotions();
+
+    let whereConditions = [eq(channels.status, "approved")];
+
+    if (categoryId) {
+      whereConditions.push(eq(channels.categoryId, categoryId));
+    }
+
+    if (type) {
+      whereConditions.push(eq(channels.type, type));
+    } else {
+      // Если тип не указан, показываем только каналы (исключаем ботов и группы)
+      whereConditions.push(eq(channels.type, "channel"));
+    }
+
+    const query = db
+      .select({
+        id: channels.id,
+        name: channels.name,
+        username: channels.username,
+        description: channels.description,
+        avatarUrl: channels.avatarUrl,
+        subscriberCount: channels.subscriberCount,
+        viewCount: channels.viewCount,
+        rating: channels.rating,
+        categoryId: channels.categoryId,
+        ownerId: channels.ownerId,
+        status: channels.status,
+        isVerified: channels.isVerified,
+        isTop: channels.isTop,
+        isUltraTop: channels.isUltraTop,
+        topPromotedAt: channels.topPromotedAt,
+        ultraTopPromotedAt: channels.ultraTopPromotedAt,
+        ultraTopExpiresAt: channels.ultraTopExpiresAt,
+        type: channels.type,
+        createdAt: channels.createdAt,
+        updatedAt: channels.updatedAt,
+        category: {
+          id: categories.id,
+          name: categories.name,
+          icon: categories.icon,
+          isAdult: categories.isAdult,
+          price: categories.price,
+          createdAt: categories.createdAt,
+        },
+        owner: {
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          role: users.role,
+          balance: users.balance,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        },
+      })
+      .from(channels)
+      .leftJoin(categories, eq(channels.categoryId, categories.id))
+      .leftJoin(users, eq(channels.ownerId, users.id))
+      .where(and(...whereConditions))
+      .orderBy(
+        sql`
+          CASE 
+            WHEN channels.is_ultra_top = true THEN 1
+            WHEN channels.is_top = true THEN 2
+            ELSE 3
+          END,
+          CASE 
+            WHEN channels.is_ultra_top = true THEN channels.ultra_top_expires_at
+            WHEN channels.is_top = true THEN channels.top_promoted_at
+            ELSE channels.created_at
+          END DESC
+        `
+      )
+      .limit(limit);
+
+    return await query;
+  }
+
+  async getChannelById(id: number): Promise<(Channel & { category: Category; owner: User }) | undefined> {
+    const [channel] = await db
+      .select({
+        id: channels.id,
+        name: channels.name,
+        username: channels.username,
+        description: channels.description,
+        avatarUrl: channels.avatarUrl,
+        subscriberCount: channels.subscriberCount,
+        viewCount: channels.viewCount,
+        rating: channels.rating,
+        categoryId: channels.categoryId,
+        ownerId: channels.ownerId,
+        status: channels.status,
+        isVerified: channels.isVerified,
+        isTop: channels.isTop,
+        isUltraTop: channels.isUltraTop,
+        topPromotedAt: channels.topPromotedAt,
+        ultraTopPromotedAt: channels.ultraTopPromotedAt,
+        type: channels.type,
+        createdAt: channels.createdAt,
+        updatedAt: channels.updatedAt,
+        category: {
+          id: categories.id,
+          name: categories.name,
+          icon: categories.icon,
+          isAdult: categories.isAdult,
+          price: categories.price,
+          createdAt: categories.createdAt,
+        },
+        owner: {
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          role: users.role,
+          balance: users.balance,
+          createdAt: channels.createdAt,
+          updatedAt: channels.updatedAt,
+        },
+      })
+      .from(channels)
+      .leftJoin(categories, eq(channels.categoryId, categories.id))
+      .leftJoin(users, eq(channels.ownerId, users.id))
+      .where(eq(channels.id, id));
+
+    return channel;
+  }
+
+  async getBots(limit: number = 50, categoryId?: number) {
+    try {
+      let whereConditions = and(
+        eq(channels.type, 'bot'),
+        eq(channels.status, 'approved')
+      );
+
+      if (categoryId) {
+        whereConditions = and(
+          eq(channels.type, 'bot'),
+          eq(channels.status, 'approved'),
+          eq(channels.categoryId, categoryId)
+        );
+      }
+
+      const results = await db
+        .select({
+          id: channels.id,
+          name: channels.name,
+          username: channels.username,
+          description: channels.description,
+          avatarUrl: channels.avatarUrl,
+          categoryId: channels.categoryId,
+          ownerId: channels.ownerId,
+          type: channels.type,
+          status: channels.status,
+          subscriberCount: channels.subscriberCount,
+          rating: channels.rating,
+          isTop: channels.isTop,
+          isUltraTop: channels.isUltraTop,
+          topPromotedAt: channels.topPromotedAt,
+          ultraTopExpiresAt: channels.ultraTopExpiresAt,
+          viewCount: channels.viewCount,
+          createdAt: channels.createdAt,
+          updatedAt: channels.updatedAt,
+          category: {
+            id: categories.id,
+            name: categories.name,
+            icon: categories.icon
+          },
+          owner: {
+            id: users.id,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            profileImageUrl: users.profileImageUrl,
+            role: users.role,
+            balance: users.balance,
+            createdAt: channels.createdAt,
+            updatedAt: users.updatedAt,
+          }
+        })
+        .from(channels)
+        .where(whereConditions)
+        .leftJoin(categories, eq(channels.categoryId, categories.id))
+        .leftJoin(users, eq(channels.ownerId, users.id))
+        .orderBy(
+          sql`
+            CASE 
+              WHEN channels.is_ultra_top = true THEN 1
+              WHEN channels.is_top = true THEN 2
+              ELSE 3
+            END,
+            CASE 
+              WHEN channels.is_ultra_top = true THEN channels.ultra_top_expires_at
+              WHEN channels.is_top = true THEN channels.top_promoted_at
+              ELSE channels.created_at
+            END DESC 
+          `
+        )
+        .limit(limit);
+
+      return results;
+    } catch (error) {
+      console.error("Error in getBots:", error);
+      throw error;
+    }
+  }
+
+  async getGroups(limit: number = 50, categoryId?: number) {
+    try {
+      let whereConditions = and(
+        eq(channels.type, 'group'),
+        eq(channels.status, 'approved')
+      );
+
+      if (categoryId) {
+        whereConditions = and(
+          eq(channels.type, 'group'),
+          eq(channels.status, 'approved'),
+          eq(channels.categoryId, categoryId)
+        );
+      }
+
+      const results = await db
+        .select({
+          id: channels.id,
+          name: channels.name,
+          username: channels.username,
+          description: channels.description,
+          avatarUrl: channels.avatarUrl,
+          categoryId: channels.categoryId,
+          ownerId: channels.ownerId,
+          type: channels.type,
+          status: channels.status,
+          subscriberCount: channels.subscriberCount,
+          rating: channels.rating,
+          isTop: channels.isTop,
+          isUltraTop: channels.isUltraTop,
+          topPromotedAt: channels.topPromotedAt,
+          ultraTopExpiresAt: channels.ultraTopExpiresAt,
+          viewCount: channels.viewCount,
+          createdAt: channels.createdAt,
+          updatedAt: channels.updatedAt,
+          category: {
+            id: categories.id,
+            name: categories.name,
+            icon: categories.icon
+          },
+          owner: {
+            id: users.id,
+            email: users.email,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            profileImageUrl: users.profileImageUrl,
+            role: users.role,
+            balance: users.balance,
+            createdAt: channels.createdAt,
+            updatedAt: users.updatedAt,
+          }
+        })
+        .from(channels)
+        .where(whereConditions)
+        .leftJoin(categories, eq(channels.categoryId, categories.id))
+        .leftJoin(users, eq(channels.ownerId, users.id))
+        .orderBy(
+          sql`
+            CASE 
+              WHEN channels.is_ultra_top = true THEN 1
+              WHEN channels.is_top = true THEN 2
+              ELSE 3
+            END,
+            CASE 
+              WHEN channels.is_ultra_top = true THEN channels.ultra_top_expires_at
+              WHEN channels.is_top = true THEN channels.top_promoted_at
+              ELSE channels.created_at
+            END DESC 
+          `
+        )
+        .limit(limit);
+
+      return results;
+    } catch (error) {
+      console.error("Error in getGroups:", error);
+      throw error;
+    }
+  }
+
+  async deleteBot(botId: number): Promise<void> {
+    await db.delete(channels).where(and(eq(channels.id, botId), eq(channels.type, "bot")));
+  }
+
+  async deleteGroup(groupId: number): Promise<void> {
+    await db.delete(channels).where(and(eq(channels.id, groupId), eq(channels.type, "group")));
+  }
+
+
+
+  async getChannelsByOwner(ownerId: number): Promise<(Channel & { category: Category; owner: User })[]> {
+    const userChannels = await db
+      .select({
+        id: channels.id,
+        name: channels.name,
+        username: channels.username,
+        description: channels.description,
+        avatarUrl: channels.avatarUrl,
+        subscriberCount: channels.subscriberCount,
+        viewCount: channels.viewCount,
+        rating: channels.rating,
+        categoryId: channels.categoryId,
+        ownerId: channels.ownerId,
+        status: channels.status,
+        isVerified: channels.isVerified,
+        isTop: channels.isTop,
+        isUltraTop: channels.isUltraTop,
+        topPromotedAt: channels.topPromotedAt,
+        ultraTopPromotedAt: channels.ultraTopPromotedAt,
+        isTopPromoted: channels.isTop,
+        isUltraTopPromoted: channels.isUltraTop,
+        type: channels.type,
+        createdAt: channels.createdAt,
+        updatedAt: channels.updatedAt,
+        category: {
+          id: categories.id,
+          name: categories.name,
+          icon: categories.icon,
+          isAdult: categories.isAdult,
+          price: categories.price,
+          createdAt: categories.createdAt,
+        },
+        owner: {
+          id: users.id,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          profileImageUrl: users.profileImageUrl,
+          role: users.role,
+          balance: users.balance,
+          createdAt: channels.createdAt,
+          updatedAt: users.updatedAt,
+        },
+      })
+      .from(channels)
+      .leftJoin(categories, eq(channels.categoryId, categories.id))
+      .leftJoin(users, eq(channels.ownerId, users.id))
+      .where(eq(channels.ownerId, ownerId))
+      .orderBy(desc(channels.updatedAt));
+
+    return userChannels;
+  }
+
+  async getChannelsByUser(userId: number): Promise<(Channel & { category: Category })[]> {
+    const userChannels = await db
+      .select({
+        id: channels.id,
+        name: channels.name,
+        username: channels.username,
+        description: channels.description,
+        avatarUrl: channels.avatarUrl,
+        subscriberCount: channels.subscriberCount,
+        viewCount: channels.viewCount,
+        rating: channels.rating,
+        categoryId: channels.categoryId,
+        ownerId: channels.ownerId,
+        status: channels.status,
+        isVerified: channels.isVerified,
+        isTop: channels.isTop,
+        isUltraTop: channels.isUltraTop,
+        topPromotedAt: channels.topPromotedAt,
+        ultraTopPromotedAt: channels.ultraTopPromotedAt,
+        ultraTopExpiresAt: channels.ultraTopExpiresAt,
+        type: channels.type,
+        createdAt: channels.createdAt,
+        updatedAt: channels.updatedAt,
+        category: {
+          id: categories.id,
+          name: categories.name,
+          icon: categories.icon,
+          isAdult: categories.isAdult,
+          price: categories.price,
+          createdAt: categories.createdAt,
+        },
+      })
+      .from(channels)
+      .leftJoin(categories, eq(channels.categoryId, categories.id))
+      .where(eq(channels.ownerId, userId))
+      .orderBy(desc(channels.createdAt));
+
+    return userChannels;
+  }
+
+  async createChannel(channel: InsertChannel): Promise<Channel> {
+    const [newChannel] = await db
+      .insert(channels)
+      .values(channel)
+      ;
+    return newChannel;
+  }
+
+  async checkChannelExistsByUrl(channelUrl: string): Promise<boolean> {
+    // Extract username from URL
+    const username = channelUrl.replace(/.*t\.me\//, '');
+
+    // Check in channels table
+    const existingChannel = await db
+      .select()
+      .from(channels)
+      .where(eq(channels.username, username))
+      .limit(1);
+
+    if (existingChannel.length > 0) {
+      return true;
+    }
+
+    // Check in channel applications table
+    const existingApplication = await db
+      .select()
+      .from(channelApplications)
+      .where(eq(channelApplications.channelUrl, channelUrl))
+      .limit(1);
+
+    return existingApplication.length > 0;
+  }
+
+  async updateChannelStatus(id: number, status: string): Promise<Channel> {
+    const [updatedChannel] = await db
+      .update(channels)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(channels.id, id))
+      ;
+    return updatedChannel;
+  }
+
+  async updateChannel(id: number, updates: Partial<Channel>): Promise<Channel> {
+    const [channel] = await db
+      .update(channels)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(channels.id, id))
+      ;
+    return channel;
+  }
+
+  async getChannelByUsername(username: string): Promise<Channel | null> {
+    const cleanUsername = username.replace('@', '');
+    const [channel] = await db
+      .select()
+      .from(channels)
+      .where(eq(channels.username, cleanUsername))
+      .limit(1);
+    return channel || null;
+  }
+
+  async getChannelsWithBotAdmin(): Promise<Channel[]> {
+    return await db
+      .select()
+      .from(channels)
+      .where(and(
+        eq(channels.status, "approved"),
+        eq(channels.botIsAdmin, true)
+      ));
+  }
+
+  async promoteChannelToTop(id: number, durationDays: number): Promise<Channel> {
+    const now = new Date();
+
+    // Получаем текущий канал/бот/группу
+    const [existingItem] = await db
+      .select()
+      .from(channels)
+      .where(eq(channels.id, id))
+      .limit(1);
+
+    if (!existingItem) {
+      throw new Error("Item not found");
+    }
+
+    // TOP теперь работает как позиционное продвижение без ограничения по времени
+    const [updatedChannel] = await db
+      .update(channels)
+      .set({ 
+        isVerified: true,
+        isTop: true,
+        topPromotedAt: now,
+        updatedAt: new Date()
+      })
+      .where(eq(channels.id, id))
+      ;
+    return updatedChannel;
+  }
+
+async promoteChannelToUltraTop(id: number, durationDays: number): Promise<Channel> {
+    const now = new Date();
+
+    // Получаем текущий канал/бот/группу
+    const [existingItem] = await db
+      .select      .from(channels)
+      .where(eq(channels.id, id))
+      .limit(1);
+
+    if (!existingItem) {
+      throw new Error("Item not found");
+    }
+
+    console.log(`Promoting item ${id} to ultra top for ${durationDays} days`);
+    console.log('Existing item:', {
+      isUltraTop: existingItem.isUltraTop,
+      ultraTopExpiresAt: existingItem.ultraTopExpiresAt,
+      ultraTopExpiresAtType: typeof existingItem.ultraTopExpiresAt
+    });
+
+    // Определяем начальную дату для расчета
+    let startDate = now;
+
+    // Если у элемента уже есть активное ULTRA TOP продвижение, добавляем время к существующему
+    if (existingItem.isUltraTop && existingItem.ultraTopExpiresAt) {
+      try {
+        let existingExpiry: Date;
+
+        // Проверяем разные форматы даты
+        if (typeof existingItem.ultraTopExpiresAt === 'string') {
+          existingExpiry = new Date(existingItem.ultraTopExpiresAt);
+        } else if (existingItem.ultraTopExpiresAt instanceof Date) {
+          existingExpiry = existingItem.ultraTopExpiresAt;
+        } else {
+          throw new Error("Invalid date format");
+        }
+
+        console.log('Parsed existing expiry:', existingExpiry, 'Is valid:', !isNaN(existingExpiry.getTime()));
+
+        if (!isNaN(existingExpiry.getTime()) && existingExpiry > now) {
+          startDate = existingExpiry;
+          console.log('Adding time to existing promotion, start date:', startDate);
+        } else {
+          console.log('Existing promotion expired or invalid, starting from now');
+        }
+      } catch (error) {
+        console.log("Error parsing existing expiry date, using current time:", error);
+      }
+    }
+
+    const expiresAt = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    console.log('New expiry date:', expiresAt);
+
+    // Сначала очищаем возможные проблемные значения
+    const [updatedChannel] = await db
+      .update(channels)
+      .set({ 
+        isVerified: true,
+        isUltraTop: true,
+        ultraTopPromotedAt: now,
+        ultraTopExpiresAt: expiresAt,
+        updatedAt: now
+      })
+      .where(eq(channels.id, id))
+      ;
+
+    console.log('Successfully updated channel:', updatedChannel.id);
+    return updatedChannel;
+  }
+
+  async deleteChannel(id: number): Promise<void> {
+    // Сначала удаляем связанные данные
+    await db.delete(ratings).where(eq(ratings.channelId, id));
+    await db.delete(channelViews).where(eq(channelViews.channelId, id));
+
+    // Затем удаляем сам канал
+    await db.delete(channels).where(eq(channels.id, id));
+  }
+
+  // Channel application operations
+  async getApplications(status?: string): Promise<(ChannelApplication & { category: Category; applicant: User })[]> {
+    let query = db
+      .select({
+        id: channelApplications.id,
+        channelUrl: channelApplications.channelUrl,
+        channelName: channelApplications.channelName,
+        channelImage: channelApplications.channelImage,
+        categoryId: channelApplications.categoryId,
+        description: channelApplications.description,
+        type: channelApplications.type,
+        applicantId: channelApplications.applicantId,
+        status: channelApplications.status,
+        reviewedBy: channelApplications.reviewedBy,
+        reviewedAt: channelApplications.reviewedAt,
+        rejectionReason: channelApplications.rejectionReason,
+        price: channelApplications.price,
+        isPaid: channelApplications.isPaid,
+        createdAt: channelApplications.createdAt,
+        updatedAt: channelApplications.updatedAt,
+        category: {
+          id: categories.id,
+          name: categories.name,
+          icon: categories.icon,
+          isAdult: categories.isAdult,
+          price: categories.price,
+          createdAt: categories.createdAt,
+        },
+        applicant: {
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          firstName: users.firstName,
+          lastName: users.lastName,
+        }
+      })
+      .from(channelApplications)
+      .leftJoin(categories, eq(channelApplications.categoryId, categories.id))
+      .leftJoin(users, eq(channelApplications.applicantId, users.id))
+      .orderBy(desc(channelApplications.createdAt));
+
+    if (status) {
+      query = query.where(eq(channelApplications.status, status));
+    }
+
+    return await query;
+  }
+
+  async createApplication(application: InsertChannelApplication): Promise<ChannelApplication> {
+    const [newApplication] = await db
+      .insert(channelApplications)
+      .values(application)
+      ;
+    return newApplication;
+  }
+
+  async updateApplicationStatus(
+    id: number,
+    status: string,
+    reviewerId: number,
+    rejectionReason?: string
+  ): Promise<ChannelApplication> {
+    const [updatedApplication] = await db
+      .update(channelApplications)
+      .set({
+        status,
+        reviewedBy: reviewerId,
+        reviewedAt: new Date(),
+        rejectionReason,
+        updatedAt: new Date(),
+      })
+      .where(eq(channelApplications.id, id))
+      ;
+    return updatedApplication;
+  }
+
+  // Payment operations
+  async createPayment(payment: InsertPayment): Promise<Payment> {
+    const [newPayment] = await db
+      .insert(payments)
+      .values(payment)
+      ;
+    return newPayment;
+  }
+
+  async updateUserBalance(userId: number, amount: string): Promise<User> {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        balance: sql`balance + ${amount}`,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, userId))
+      ;
+    return updatedUser;
+  }
+
+  // Stats operations
+  async getStats(): Promise<{
+    totalChannels: number;
+    totalUsers: number;
+    pendingApplications: number;
+    totalRevenue: string;
+  }> {
+    const [channelCount] = await db
+      .select({ count: count() })
+      .from(channels)
+      .where(eq(channels.status, "approved"));
+
+    const [userCount] = await db
+      .select({ count: count() })
+      .from(users);
+
+    const [pendingCount] = await db
+      .select({ count: count() })
+      .from(channelApplications)
+      .where(eq(channelApplications.status, "pending"));
+
+    const [revenueResult] = await db
+      .select({ total: sql<string>`COALESCE(SUM(amount), 0)` })
+      .from(payments)
+      .where(eq(payments.status, "completed"));
+
+    return {
+      totalChannels: channelCount.count,
+      totalUsers: userCount.count,
+      pendingApplications: pendingCount.count,
+      totalRevenue: revenueResult.total || "0",
+    };
+  }
+
+  //  // Rating operations
+  async rateChannel(channelId: number, userId: number, rating: number): Promise<void> {
+    // Используем PostgreSQL UPSERT для более эффективной работы
+    await db
+      .insert(ratings)
+      .values({ channelId, userId, rating })
+      .onConflictDoUpdate({
+        target: [ratings.channelId, ratings.userId],
+        set: { rating }
+      });
+
+    // Пересчитываем средний рейтинг и обновляем канал
+    const ratingData = await this.getChannelRating(channelId);
+    await db
+      .update(channels)
+      .set({ 
+        rating: ratingData.averageRating.toFixed(2),
+        updatedAt: new Date()
+      })
+      .where(eq(channels.id, channelId));
+  }
+
+  async getChannelRating(channelId: number): Promise<{ averageRating: number; totalRatings: number }> {
+    const result = await db
+      .select({
+        averageRating: avg(ratings.rating),
+        totalRatings: count(ratings.id)
+      })
+      .from(ratings)
+      .where(eq(ratings.channelId, channelId));
+
+    return {
+      averageRating: Number(result[0]?.averageRating || 0),
+      totalRatings: Number(result[0]?.totalRatings || 0)
+    };
+  }
+
+  // View operations
+  async addChannelView(channelId: number, userId: number): Promise<void> {
+    // Проверяем, есть ли уже просмотр от этого пользователя
+    const existingView = await db
+      .select()
+      .from(channelViews)
+      .where(and(
+        eq(channelViews.channelId, channelId),
+        eq(channelViews.userId, userId)
+      ));
+
+    // Если просмотр уже есть, не добавляем новый
+    if (existingView.length > 0) {
+      return;
+    }
+
+    // Записываем новый просмотр
+    await db.insert(channelViews).values({ channelId, userId });
+
+    // Обновляем счетчик просмотров в таблице каналов
+    await db
+      .update(channels)
+      .set({ 
+        viewCount: sql`view_count + 1`,
+        updatedAt: new Date()
+      })
+      .where(eq(channels.id, channelId));
+  }
+
+  async getChannelViews(channelId: number): Promise<number> {
+    const result = await db
+      .select({ count: count(channelViews.id) })
+      .from(channelViews)
+      .where(eq(channelViews.channelId, channelId));
+
+    return Number(result[0]?.count || 0);
+  }
+
+  async getChannelViews24h(channelId: number): Promise<number> {
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+    const result = await db
+      .select({ count: count(channelViews.id) })
+      .from(channelViews)
+      .where(
+        and(
+          eq(channelViews.channelId, channelId),
+          gte(channelViews.viewedAt, twentyFourHoursAgo)
+        )
+      );
+
+    return Number(result[0]?.count || 0);
+  }
+
+  async updateUserProfile(userId: number, profileData: { firstName?: string, lastName?: string }): Promise<User> {
+    const [updatedUser] = await db.update(users)
+      .set({
+        ...profileData,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      ;
+
+    return updatedUser;
+  }
+
+  async updateUserEmail(userId: number, email: string): Promise<User> {
+    const [updatedUser] = await db.update(users)
+      .set({
+        email,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      ;
+
+    return updatedUser;
+  }
+
+  async updateUserPassword(userId: number, hashedPassword: string): Promise<User> {
+    const [updatedUser] = await db.update(users)
+      .set({
+        password: hashedPassword,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      ;
+
+    return updatedUser;
+  }
+
+  async saveEmailVerificationCode(userId: number, email: string, code: string): Promise<User> {
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 минут
+
+    const [updatedUser] = await db.update(users)
+      .set({
+        emailVerificationCode: code,
+        emailVerificationExpires: expiresAt,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      ;
+
+    return updatedUser;
+  }
+
+  async verifyEmailCode(userId: number, code: string, newEmail: string): Promise<{ success: boolean; user?: User; error?: string }> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+
+    if (!user) {
+      return { success: false, error: "Пользователь не найден" };
+    }
+
+    if (!user.emailVerificationCode || !user.emailVerificationExpires) {
+      return { success: false, error: "Код верификации не найден" };
+    }
+
+    const now = new Date();
+    if (now > user.emailVerificationExpires) {
+      return { success: false, error: "Код верификации истек" };
+    }
+
+    if (user.emailVerificationCode !== code) {
+      return { success: false, error: "Неверный код верификации" };
+    }
+
+    // Код верный, обновляем email и очищаем код верификации
+    const [updatedUser] = await db.update(users)
+      .set({
+        email: newEmail,
+        isEmailVerified: true,
+        emailVerificationCode: null,
+        emailVerificationExpires: null,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId))
+      ;
+
+    return { success: true, user: updatedUser };
+  }
+
+  async clearEmailVerificationCode(userId: number): Promise<void> {
+    await db.update(users)
+      .set({
+        emailVerificationCode: null,
+        emailVerificationExpires: null,
+        updatedAt: new Date()
+      })
+      .where(eq(users.id, userId));
+  }
+
+  async getUserTopups(userId: number): Promise<Payment[]> {
+    return await db
+      .select()
+      .from(payments)
+      .where(eq(payments.userId, userId))
+      .orderBy(desc(payments.createdAt));
+  }
+
+  async getTopups(status?: string): Promise<Payment[]> {
+    let query = db
+      .select()
+      .from(payments)
+      .orderBy(desc(payments.createdAt));
+
+    if (status) {
+      query = query.where(eq(payments.status, status));
+    }
+
+    return await query;
+  }
+    async getUserApplications(userId: number): Promise<ChannelApplication[]> {
+    return await db
+      .select()
+      .from(channelApplications)
+      .where(eq(channelApplications.applicantId, userId))
+      .orderBy(desc(channelApplications.createdAt));
+  }
+
+  async getUserApplicationsByStatus(userId: number, status: string): Promise<ChannelApplication[]> {
+    return await db
+      .select()
+      .from(channelApplications)
+      .where(and(
+        eq(channelApplications.applicantId, userId),
+        eq(channelApplications.status, status)
+      ))
+      .orderBy(desc(channelApplications.createdAt));
+  }
+
+  async getUserChannels(userId: number) {
+    try {
+      console.log(`Fetching channels for user ID: ${userId}`);
+
+      const userChannels = await db
+        .select({
+          id: channels.id,
+          name: channels.name,
+          username: channels.username,
+          description: channels.description,
+          avatarUrl: channels.avatarUrl,
+          subscriberCount: channels.subscriberCount,
+          rating: channels.rating,
+          viewCount: channels.viewCount,
+
+          categoryId: channels.categoryId,
+          ownerId: channels.ownerId,
+          type: channels.type,
+          status: channels.status,
+          isTop: channels.isTop,
+          isUltraTop: channels.isUltraTop,
+          topPromotedAt: channels.topPromotedAt,
+          ultraTopPromotedAt: channels.ultraTopPromotedAt,
+          ultraTopExpiresAt: channels.ultraTopExpiresAt,
+          createdAt: channels.createdAt,
+          updatedAt: channels.updatedAt,
+          // Category fields
+          categoryName: categories.name,
+          categoryIcon: categories.icon,
+          categoryIsAdult: categories.isAdult,
+          categoryPrice: categories.price
+        })
+        .from(channels)
+        .leftJoin(categories, eq(channels.categoryId, categories.id))
+        .where(eq(channels.ownerId, userId))
+        .orderBy(desc(channels.createdAt));
+
+      console.log(`Found ${userChannels.length} channels for user ${userId}`);
+
+      // Transform the flat result into the expected nested structure
+      return userChannels.map(channel => ({
+        id: channel.id,
+        name: channel.name,
+        username: channel.username,
+        description: channel.description,
+        avatarUrl: channel.avatarUrl,
+        subscriberCount: channel.subscriberCount,
+        rating: parseFloat(channel.rating || '0') || 0,
+        viewCount: channel.viewCount || 0,
+
+        categoryId: channel.categoryId,
+        ownerId: channel.ownerId,
+        type: channel.type,
+        status: channel.status,
+        isTop: channel.isTop,
+        isUltraTop: channel.isUltraTop,
+        isTopPromoted: channel.isTop,
+        isUltraTopPromoted: channel.isUltraTop,
+        topPromotedAt: channel.topPromotedAt,
+        ultraTopPromotedAt: channel.ultraTopPromotedAt,
+        ultraTopExpiresAt: channel.ultraTopExpiresAt,
+        createdAt: channel.createdAt,
+        updatedAt: channel.updatedAt,
+        category: {
+          id: channel.categoryId,
+          name: channel.categoryName || 'Без категории',
+          icon: channel.categoryIcon || 'fas fa-folder',
+          isAdult: channel.categoryIsAdult || false,
+          price: channel.categoryPrice || '30'
+        }
+      }));
+    } catch (error) {
+      console.error("Error in getUserChannels:", error);
+      throw error;
+    }
+  }
+
+  // News operations
+  async getNews(limit = 50): Promise<(News & { author: User })[]> {
+    const result = await db
+      .select()
+      .from(news)
+      .leftJoin(users, eq(news.authorId, users.id))
+      .where(eq(news.status, 'published'))
+      .orderBy(desc(news.createdAt))
+      .limit(limit);
+
+    return result.map(row => ({
+      ...row.news,
+      author: row.users!,
+    }));
+  }
+
+  async getNewsById(id: number): Promise<(News & { author: User }) | undefined> {
+    const result = await db
+      .select()
+      .from(news)
+      .leftJoin(users, eq(news.authorId, users.id))
+      .where(eq(news.id, id));
+
+    const row = result[0];
+    if (!row) return undefined;
+
+    return {
+      ...row.news,
+      author: row.users!,
+    };
+  }
+
+  async createNews(newsData: InsertNews): Promise<News> {
+    const [newNews] = await db.insert(news).values(newsData);
+    return newNews;
+  }
+
+  async updateNews(id: number, updates: Partial<News>): Promise<News> {
+    const [updatedNews] = await db
+      .update(news)
+      .set({
+        ...updates,
+        updatedAt: new Date()
+      })
+      .where(eq(news.id, id))
+      ;
+
+    return updatedNews;
+  }
+
+  async updateNewsStatus(id: number, status: string): Promise<void> {
+    await db
+      .update(news)
+      .set({ 
+        status,
+        updatedAt: new Date()
+      })
+      .where(eq(news.id, id));
+  }
+
+  async deleteNews(id: number): Promise<void> {
+    await db.delete(news).where(eq(news.id, id));
+  }
+
+  async getUserStatistics(userId: number): Promise<any> {
+    try {
+      // Get user's applications count
+      const applicationsCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(channelApplications)
+        .where(eq(channelApplications.applicantId, userId));
+
+      // Get user's channels count
+      const channelsCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(channels)
+        .where(eq(channels.ownerId, userId));
+
+      return {
+        applicationsCount: applicationsCount[0]?.count || 0,
+        channelsCount: channelsCount[0]?.count || 0,
+      };
+    } catch (error) {
+      console.error("Error getting user statistics:", error);
+      return {
+        applicationsCount: 0,
+        channelsCount: 0,
+      };
+    }
+  }
+
+  // Get unread notification count
+  async getUnreadNotificationCount(userId: number): Promise<number> {
+    try {
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(notifications)
+        .where(and(
+          eq(notifications.userId, userId),
+          eq(notifications.isRead, false)
+        ));
+
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error("Error getting unread notification count:", error);
+      return 0;
+    }
+  }
+
+  // Notification methods
+  async getNotifications(userId: number) {
+    try {
+      const userNotifications = await db.select()
+        .from(notifications)
+        .where(eq(notifications.userId, userId))
+        .orderBy(desc(notifications.createdAt));
+
+      return userNotifications;
+    } catch (error) {
+      console.error("Error getting notifications:", error);
+      return [];
+    }
+  }
+
+  async createNotification(notification: any) {
+    try {
+      const [newNotification] = await db.insert(notifications)
+        .values(notification)
+        ;
+
+      return newNotification;
+    } catch (error) {
+      console.error("Error creating notification:", error);
+      throw error;
+    }
+  }
+
+  async markNotificationAsRead(notificationId: number) {
+    try {
+      await db.update(notifications)
+        .set({ isRead: true })
+        .where(eq(notifications.id, notificationId));
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      throw error;
+    }
+  }
+
+  async markAllNotificationsAsRead(userId: number) {
+    try {
+      await db.update(notifications)
+        .set({ isRead: true })
+        .where(eq(notifications.userId, userId));
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      throw error;
+    }
+  }
+
+  async getBroadcastStats(): Promise<{
+    totalUsers: number;
+    emailUsers: number;
+    telegramUsers: number;
+  }> {
+    try {
+      const [totalUsersResult, emailUsersResult, telegramUsersResult] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` }).from(users),
+        db.select({ count: sql<number>`count(*)` }).from(users).where(and(isNotNull(users.email), ne(users.email, ''))),
+        db.select({ count: sql<number>`count(*)` }).from(users).where(and(isNotNull(users.telegramId), ne(users.telegramId, '')))
+      ]);
+
+      return {
+        totalUsers: totalUsersResult[0]?.count || 0,
+        emailUsers: emailUsersResult[0]?.count || 0,
+        telegramUsers: telegramUsersResult[0]?.count || 0,
+      };
+    } catch (error) {
+      console.error("Error getting broadcast stats:", error);
+      throw error;
+    }
+  }
+
+  async getUsersForEmailBroadcast(): Promise<User[]> {
+    try {
+      const emailUsers = await db.select()
+        .from(users)
+        .where(and(
+          isNotNull(users.email),
+          ne(users.email, '')
+        ));
+      return emailUsers;
+    } catch (error) {
+      console.error("Error getting users for email broadcast:", error);
+      return [];
+    }
+  }
+
+  async getUsersForTelegramBroadcast(): Promise<User[]> {
+    try {
+      const telegramUsers = await db.select()
+        .from(users)
+        .where(and(
+          isNotNull(users.telegramId),
+          ne(users.telegramId, '')
+        ));
+      return telegramUsers;
+    } catch (error) {
+      console.error("Error getting users for telegram broadcast:", error);
+      return [];
+    }
+  }
+
+  async sendBroadcast(type: 'email' | 'telegram', subject: string | undefined, message: string): Promise<number> {
+    try {
+      let sentCount = 0;
+
+      if (type === 'email') {
+        const emailUsers = await this.getUsersForEmailBroadcast();
+
+        for (const user of emailUsers) {
+          if (user.email) {
+            const success = await sendBroadcastEmail(user.email, subject || 'Уведомление', message);
+            if (success) {
+              sentCount++;
+            }
+          }
+        }
+      } else if (type === 'telegram') {
+        const telegramUsers = await this.getUsersForTelegramBroadcast();
+
+        for (const user of telegramUsers) {
+          if (user.telegramId) {
+            const success = await sendTelegramBroadcast(user.telegramId, message);
+            if (success) {
+              sentCount++;
+            }
+          }
+        }
+      }
+
+      return sentCount;
+    } catch (error) {
+      console.error("Error sending broadcast:", error);
+      throw error;
+    }
+  }
+
+  // Функция для отправки файлов в поддержку
+  async createSupportFile(data: {
+    messageId: number;
+    filename: string;
+    originalName: string;
+    mimeType: string;
+    fileData: string;
+    fileSize: number;
+  }) {
+    try {
+      const [supportFile] = await db.insert(supportFiles).values({
+        messageId: data.messageId,
+        filename: data.filename,
+        originalName: data.originalName,
+        mimeType: data.mimeType,
+        fileData: data.fileData,
+        fileSize: data.fileSize,
+        createdAt: new Date(),
+      });
+
+      return supportFile;
+    } catch (error) {
+      console.error("Error creating support file:", error);
+      throw error;
+    }
+  }
+
+  async getSupportFile(messageId: number) {
+    try {
+      const file = await db.select()
+        .from(supportFiles)
+        .where(eq(supportFiles.messageId, messageId))
+        .limit(1);
+
+      return file[0] || null;
+    } catch (error) {
+      console.error("Error getting support file:", error);
+      throw error;
+    }
+  }
+
+  // Получение всех активных чатов для админа
+  async getActiveSupportChats(): Promise<any[]> {
+    try {
+      // Получаем последние сообщения для каждого уникального chatId
+      const latestMessages = await db
+        .select({
+          chatId: supportMessages.chatId,
+          lastMessageTime: sql<Date>`MAX(${supportMessages.createdAt})`,
+          count: sql<number>`COUNT(*)`,
+          // Получаем последнее сообщение и информацию о пользователе
+          lastMessage: sql<string>`
+            (SELECT message FROM support_messages sm2 
+             WHERE sm2.chat_id = ${supportMessages.chatId} 
+             ORDER BY created_at DESC LIMIT 1)
+          `,
+          userId: sql<number>`
+            (SELECT user_id FROM support_messages sm2 
+             WHERE sm2.chat_id = ${supportMessages.chatId} 
+             ORDER BY created_at DESC LIMIT 1)
+          `,
+          isFromAdmin: sql<boolean>`
+            (SELECT is_from_admin FROM support_messages sm2 
+             WHERE sm2.chat_id = ${supportMessages.chatId} 
+             ORDER BY created_at DESC LIMIT 1)
+          `
+        })
+        .from(supportMessages)
+        .groupBy(supportMessages.chatId)
+        .orderBy(sql`MAX(${supportMessages.createdAt}) DESC`);
+
+      // Получаем информацию о пользователях для каждого чата
+      const chats = [];
+      for (const messageData of latestMessages) {
+        const user = await db.select({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          telegramUsername: users.telegramUsername
+        })
+        .from(users)
+        .where(eq(users.id, messageData.userId))
+        .limit(1);
+
+        if (user.length > 0) {
+          chats.push({
+            chatId: messageData.chatId,
+            userId: messageData.userId,
+            user: user[0],
+            lastMessage: messageData.lastMessage,
+            lastMessageTime: messageData.lastMessageTime,
+            messageCount: messageData.count,
+            isFromAdmin: messageData.isFromAdmin
+          });
+        }
+      }
+
+      return chats;
+    } catch (error) {
+      console.error("Error getting active support chats:", error);
+      throw error;
+    }
+  }
+
+  async getSupportMessages(userId: number): Promise<any[]> {
+    try {
+      const messages = await db
+        .select()
+        .from(supportMessages)
+        .where(eq(supportMessages.userId, userId))
+        .orderBy(desc(supportMessages.createdAt));
+
+      return messages;
+    } catch (error) {
+      console.error("Error getting support messages:", error);
+      return [];
+    }
+  }
+
+  async getSupportChats(): Promise<any[]> {
+    try {
+      return await this.getActiveSupportChats();
+    } catch (error) {
+      console.error("Error getting support chats:", error);
+      return [];
+    }
+  }
+
+  async getSupportChatById(chatId: string): Promise<any | null> {
+    try {
+      const messages = await db
+        .select()
+        .from(supportMessages)
+        .where(eq(supportMessages.chatId, chatId))
+        .orderBy(asc(supportMessages.createdAt));
+
+      if (messages.length === 0) {
+        return null;
+      }
+
+      return {
+        chatId,
+        messages,
+        userId: messages[0].userId
+      };
+    } catch (error) {
+      console.error("Error getting support chat:", error);
+      return null;
+    }
+  }
+
+  async getUnreadSupportCount(userId: number): Promise<number> {
+    try {
+      const result = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(supportMessages)
+        .where(and(
+          eq(supportMessages.userId, userId),
+          eq(supportMessages.isRead, false),
+          eq(supportMessages.isFromAdmin, true)
+        ));
+
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error("Error getting unread support count:", error);
+      return 0;
+    }
+  }
+
+  async createSupportMessage(data: {
+    userId: number;
+    message: string;
+    isFromAdmin: boolean;
+    chatId: string;
+    adminUserId?: number;
+  }): Promise<any> {
+    try {
+      const [message] = await db
+        .insert(supportMessages)
+        .values({
+          chatId: data.chatId,
+          userId: data.userId,
+          message: data.message,
+          isFromAdmin: data.isFromAdmin,
+          adminUserId: data.adminUserId,
+          isRead: false,
+          createdAt: new Date()
+        })
+        ;
+
+      return message;
+    } catch (error) {
+      console.error("Error creating support message:", error);
+      throw error;
+    }
+  }
+
+  async markSupportMessagesAsRead(userId: number, chatId: string): Promise<void> {
+    try {
+      await db
+        .update(supportMessages)
+        .set({ isRead: true })
+        .where(and(
+          eq(supportMessages.userId, userId),
+          eq(supportMessages.chatId, chatId)
+        ));
+    } catch (error) {
+      console.error("Error marking support messages as read:", error);
+      throw error;
+    }
+  }
+
+  async getSupportFile(filename: string): Promise<SupportFile | null> {
+    try {
+      const [file] = await db
+        .select()
+        .from(supportFiles)
+        .where(eq(supportFiles.filename, filename))
+        .limit(1);
+
+      return file || null;
+    } catch (error) {
+      console.error("Error getting support file:", error);
+      return null;
+    }
+  }
+
+  async getSupportFileByMessageId(messageId: number): Promise<SupportFile | null> {
+    try {
+      const [file] = await db
+        .select()
+        .from(supportFiles)
+        .where(eq(supportFiles.messageId, messageId))
+        .limit(1);
+
+      return file || null;
+    } catch (error) {
+      console.error("Error getting support file by message ID:", error);
+      return null;
+    }
+  }
+
+  async resolveSupportChat(chatId: string): Promise<void> {
+    try {
+      await db
+        .update(supportMessages)
+        .set({ isResolved: true })
+        .where(eq(supportMessages.chatId, chatId));
+    } catch (error) {
+      console.error("Error resolving support chat:", error);
+      throw error;
+    }
+  }
+
+  async getLandingStats(): Promise<{
+    totalChannels: number;
+    totalUsers: number;
+    totalCategories: number;
+  }> {
+    try {
+      const [channelCount] = await db
+        .select({ count: count() })
+        .from(channels)
+        .where(eq(channels.status, "approved"));
+
+      const [userCount] = await db
+        .select({ count: count() })
+        .from(users);
+
+      const [categoryCount] = await db
+        .select({ count: count() })
+        .from(categories);
+
+      return {
+        totalChannels: channelCount.count,
+        totalUsers: userCount.count,
+        totalCategories: categoryCount.count,
+      };
+    } catch (error) {
+      console.error("Error getting landing stats:", error);
+      return {
+        totalChannels: 0,
+        totalUsers: 0,
+        totalCategories: 0,
+      };
+    }
+  }
+}
+
+export const storage = new DatabaseStorage();

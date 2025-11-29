@@ -1,0 +1,21 @@
+/* Принудительное центрирование модальных окон */
+[data-radix-dialog-content] {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 50 !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+  margin: 0 !important;
+  width: auto !important;
+  max-width: 32rem !important;
+}
+
+/* Overlay должен покрывать весь экран */
+[data-radix-dialog-overlay] {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 40 !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}

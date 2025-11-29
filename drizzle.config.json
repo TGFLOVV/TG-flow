@@ -1,0 +1,9 @@
+
+{
+  "schema": "./shared/schema.ts",
+  "out": "./drizzle", 
+  "dialect": "postgresql",
+  "dbCredentials": {
+    "url": "postgresql://postgres:CqDfxZEuOLtVUIlnlXYjnBggxbDWIZrv@shuttle.proxy.rlwy.net:17532/railway"
+  }
+}

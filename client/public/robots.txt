@@ -1,0 +1,42 @@
+User-agent: *
+Allow: /
+
+# Основные страницы
+Allow: /channels
+Allow: /channels?category=*
+
+# SEO оптимизация
+Sitemap: https://tgflovv.ru/sitemap.xml
+
+# Разрешаем поисковые запросы по бренду
+Allow: /?q=*
+Allow: /search?*
+
+# Дополнительные директивы для поисковиков
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 1
+
+User-agent: Yandex
+Allow: /
+Crawl-delay: 1
+
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Блокируем служебные файлы
+Disallow: /api/
+Disallow: /*.json$
+Disallow: /*.js$
+Disallow: /*.css$
+Disallow: /admin
+Disallow: /dashboard
+
+# Разрешаем изображения
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /*.gif$
+Allow: /*.svg$
+Allow: /*.webp$

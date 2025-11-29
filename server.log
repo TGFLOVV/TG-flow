@@ -1,0 +1,3 @@
+TG Flow запущен на порту 3001
+Откройте http://tgflovv.ru
+ВНИМАНИЕ: Настройте DATABASE_URL в файле standalone.js

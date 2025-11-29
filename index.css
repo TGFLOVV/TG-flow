@@ -1,0 +1,1781 @@
+@import './dialog-fix.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Fix z-index for Select dropdowns in modals */
+[data-radix-popper-content-wrapper] {
+  z-index: 10001 !important;
+}
+
+[data-radix-select-content] {
+  z-index: 10001 !important;
+}
+
+.select-content-modal {
+  z-index: 10001 !important;
+  position: relative !important;
+}
+
+/* Enhanced performance optimizations */
+* {
+  box-sizing: border-box;
+}
+
+
+
+html {
+  scroll-behavior: smooth;
+  font-display: swap;
+  overflow-x: hidden;
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-synthesis: none;
+  text-rendering: optimizeSpeed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  contain: layout style paint;
+  transform: translateZ(0);
+  /* Allow normal scrolling */
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+#root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Optimize image loading */
+img {
+  content-visibility: auto;
+  contain-intrinsic-size: 200px;
+  image-rendering: optimizeQuality;
+}
+
+/* Support button safe area for mobile browsers */
+.safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+  margin-bottom: max(env(safe-area-inset-bottom), 0px);
+}
+
+/* Ensure support button is always above browser UI */
+@supports (padding: max(0px)) {
+  .support-button-safe {
+    bottom: max(1rem, calc(1rem + env(safe-area-inset-bottom))) !important;
+  }
+}
+
+/* Additional mobile browser compatibility */
+@media screen and (max-width: 768px) {
+  .support-button-safe {
+    bottom: 1rem !important;
+    transform: translateY(-env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Support button hover effects */
+.support-button-safe button {
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.support-button-safe button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile positioning for support button */
+@media (max-width: 768px) {
+  .support-button-safe {
+    bottom: 20px !important;
+  }
+}
+
+/* iOS Safari specific */
+@supports (-webkit-touch-callout: none) {
+  .support-button-safe {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 20px) !important;
+  }
+}
+
+/* Optimize animations */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Fixed toast positioning like toastManager */
+.toast-container {
+  position: fixed !important;
+  top: 1rem !important;
+  right: 1rem !important;
+  z-index: 999999 !important;
+  width: 400px !important;
+  max-width: calc(100vw - 2rem) !important;
+  pointer-events: none !important;
+  transform: translateZ(0) !important;
+  will-change: transform !important;
+}
+
+/* Mobile adjustments */
+@media (max-width: 480px) {
+  .toast-container {
+    top: max(1rem, env(safe-area-inset-top)) !important;
+    left: 1rem !important;
+    right: 1rem !important;
+    width: calc(100vw - 2rem) !important;
+    max-width: none !important;
+    transform: translateZ(0) !important;
+  }
+}
+
+/* Ensure toasts stay above everything */
+.toast-container * {
+  position: relative !important;
+  z-index: inherit !important;
+}
+
+/* Override any layout that might interfere */
+body.has-toasts {
+  position: relative;
+}
+
+body.has-toasts .toast-container {
+  position: fixed !important;
+  top: 1rem !important;
+  right: 1rem !important;
+  z-index: 999999 !important;
+}
+
+/* Toast animations and styling */
+.toast-item {
+  animation: slideInRight 0.3s ease-out;
+  margin-bottom: 0.75rem;
+  pointer-events: auto !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  border-radius: 0.5rem !important;
+  backdrop-filter: blur(10px) !important;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.toast-item.removing {
+  animation: slideOutRight 0.3s ease-in forwards;
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+/* Optimize scrolling */
+.scroll-container {
+  overscroll-behavior: contain;
+  scroll-behavior: smooth;
+}
+
+/* GPU acceleration for animations */
+.animate-spin,
+.animate-pulse {
+  will-change: transform;
+  transform: translateZ(0);
+}
+
+/* Оптимизация виртуализации */
+.perf-grid {
+  contain: layout style paint;
+}
+
+/* Красивые стили для модальных окон и форм */
+.support-modal {
+  border-radius: 12px !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Улучшенные стили для полей ввода в модальных окнах */
+[data-radix-react-dialog-content] input,
+[data-radix-react-dialog-content] textarea,
+[data-radix-react-dialog-content] select,
+[data-radix-react-alert-dialog-content] input,
+[data-radix-react-alert-dialog-content] textarea,
+[data-radix-react-alert-dialog-content] select {
+  padding: 12px 16px !important;
+  border-radius: 8px !important;
+  border: 2px solid hsl(var(--border)) !important;
+  background-color: hsl(var(--background)) !important;
+  transition: all 0.2s ease !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+}
+
+[data-radix-react-dialog-content] input:focus,
+[data-radix-react-dialog-content] textarea:focus,
+[data-radix-react-dialog-content] select:focus,
+[data-radix-react-alert-dialog-content] input:focus,
+[data-radix-react-alert-dialog-content] textarea:focus,
+[data-radix-react-alert-dialog-content] select:focus {
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 3px hsl(var(--primary) / 0.1) !important;
+  outline: none !important;
+}
+
+/* Улучшенные стили для лейблов */
+[data-radix-react-dialog-content] label,
+[data-radix-react-alert-dialog-content] label {
+  font-weight: 500 !important;
+  margin-bottom: 8px !important;
+  display: block !important;
+  color: hsl(var(--foreground)) !important;
+  font-size: 14px !important;
+}
+
+/* Улучшенные стили для кнопок в модальных окнах */
+[data-radix-react-dialog-content] button,
+[data-radix-react-alert-dialog-content] button {
+  padding: 12px 24px !important;
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  border: 2px solid transparent !important;
+}
+
+[data-radix-react-dialog-content] button:hover,
+[data-radix-react-alert-dialog-content] button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Стили для заголовков модальных окон */
+[data-radix-react-dialog-content] [data-radix-react-dialog-title],
+[data-radix-react-alert-dialog-content] [data-radix-react-alert-dialog-title] {
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  margin-bottom: 8px !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Стили для описаний модальных окон */
+[data-radix-react-dialog-content] [data-radix-react-dialog-description],
+[data-radix-react-alert-dialog-content] [data-radix-react-alert-dialog-description] {
+  color: hsl(var(--muted-foreground)) !important;
+  margin-bottom: 24px !important;
+  line-height: 1.6 !important;
+}
+
+/* Улучшенные отступы между группами элементов */
+[data-radix-react-dialog-content] .form-group,
+[data-radix-react-alert-dialog-content] .form-group {
+  margin-bottom: 20px !important;
+}
+
+[data-radix-react-dialog-content] .form-group:last-of-type,
+[data-radix-react-alert-dialog-content] .form-group:last-of-type {
+  margin-bottom: 0 !important;
+}
+
+/* Стили для textarea с автоматическим изменением размера */
+[data-radix-react-dialog-content] textarea,
+[data-radix-react-alert-dialog-content] textarea {
+  min-height: 100px !important;
+  resize: vertical !important;
+}
+
+/* Стили для чекбоксов и радиокнопок */
+[data-radix-react-dialog-content] input[type="checkbox"],
+[data-radix-react-dialog-content] input[type="radio"],
+[data-radix-react-alert-dialog-content] input[type="checkbox"],
+[data-radix-react-alert-dialog-content] input[type="radio"] {
+  margin-right: 8px !important;
+  padding: 0 !important;
+}
+
+/* Стили для файловых инпутов */
+[data-radix-react-dialog-content] input[type="file"],
+[data-radix-react-alert-dialog-content] input[type="file"] {
+  padding: 8px !important;
+  border: 2px dashed hsl(var(--border)) !important;
+  background-color: hsl(var(--muted) / 0.3) !important;
+}
+
+[data-radix-react-dialog-content] input[type="file"]:hover,
+[data-radix-react-alert-dialog-content] input[type="file"]:hover {
+  border-color: hsl(var(--primary)) !important;
+  background-color: hsl(var(--primary) / 0.05) !important;
+}
+
+.contain-layout {
+  contain: layout;
+}
+
+/* Фиксированное позиционирование модальных окон */
+.dialog-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 50 !important;
+  background: rgba(0, 0, 0, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.dialog-content {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 51 !important;
+  max-height: 90vh !important;
+  overflow-y: auto !important;
+}
+
+/* Debounce hover effects */
+.hover-debounce {
+  transition: all 0.15s ease-out;
+}
+
+/* Reduce reflows */
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+/* Performance optimizations */
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-auto {
+  will-change: auto;
+}
+
+/* Optimize paint layers */
+.promote-layer {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* Reduce animation frequency */
+@media (prefers-reduced-motion: no-preference) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Telegram-style Loading Animations */
+@keyframes tg-message-float {
+  0% {
+    transform: translateY(0px) translateX(0px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  50% {
+    transform: translateY(-300px) translateX(10px) rotate(2deg);
+    opacity: 0.6;
+  }
+  80% {
+    transform: translateY(-500px) translateX(-5px) rotate(-1deg);
+    opacity: 0.3;
+  }
+  100% {
+    transform: translateY(-600px) translateX(0px) rotate(0deg);
+    opacity: 0;
+  }
+}
+
+@keyframes tg-ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.3);
+    opacity: 0.4;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.6);
+    opacity: 0;
+  }
+}
+
+@keyframes tg-wave {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) scale(1.1);
+  }
+}
+
+@keyframes tg-fade-out {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes tg-main-loader {
+  0% {
+    opacity: 1;
+    visibility: visible;
+  }
+  85% {
+    opacity: 1;
+    visibility: visible;
+  }
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+/* КРАСИВЫЕ СТИЛИ ДЛЯ МОДАЛЬНЫХ ОКОН С VIEWPORT ЦЕНТРИРОВАНИЕМ */
+[data-radix-react-dialog-overlay],
+[data-radix-react-alert-dialog-overlay] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.8)) !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 16px !important;
+  animation: overlayFadeIn 0.3s ease-out !important;
+}
+
+[data-radix-react-dialog-content],
+[data-radix-react-alert-dialog-content] {
+  position: relative !important;
+  z-index: 1000000 !important;
+  background: linear-gradient(145deg, hsl(var(--background)), hsl(var(--background))) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 20px !important;
+  box-shadow: 
+    0 32px 64px -12px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
+  padding: 64px !important;
+  width: 100% !important;
+  max-width: 36rem !important;
+  max-height: calc(100vh - 32px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  box-sizing: border-box !important;
+  animation: modalSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Мобильная адаптивность для модальных окон */
+@media (max-width: 768px) {
+  [data-radix-react-dialog-overlay],
+  [data-radix-react-alert-dialog-overlay] {
+    padding: 16px !important;
+  }
+
+  [data-radix-react-dialog-content],
+  [data-radix-react-alert-dialog-content] {
+    padding: 32px !important;
+    max-height: calc(100vh - 32px) !important;
+    border-radius: 16px !important;
+  }
+}
+
+/* СОВРЕМЕННЫЕ АНИМАЦИИ ДЛЯ МОДАЛЬНЫХ ОКОН */
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* ПРИНУДИТЕЛЬНАЯ УСТАНОВКА ОТСТУПОВ */
+.dialog-content-custom,
+[role="dialog"],
+[role="alertdialog"] {
+  padding: 64px !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 768px) {
+  .dialog-content-custom,
+  [role="dialog"],
+  [role="alertdialog"] {
+    padding: 48px !important;
+  }
+}
+
+/* УЛУЧШЕННОЕ ОФОРМЛЕНИЕ ЭЛЕМЕНТОВ В МОДАЛЬНЫХ ОКНАХ */
+[data-radix-react-dialog-content] > *:not(:last-child),
+[data-radix-react-alert-dialog-content] > *:not(:last-child) {
+  margin-bottom: 32px !important;
+}
+
+/* Красивые заголовки */
+[data-radix-react-dialog-content] h1,
+[data-radix-react-dialog-content] h2,
+[data-radix-react-dialog-content] h3,
+[data-radix-react-alert-dialog-content] h1,
+[data-radix-react-alert-dialog-content] h2,
+[data-radix-react-alert-dialog-content] h3 {
+  margin-bottom: 28px !important;
+  margin-top: 0 !important;
+  line-height: 1.3 !important;
+  font-weight: 600 !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* Стильные кнопки внутри модальных окон */
+[data-radix-react-dialog-content] button,
+[data-radix-react-alert-dialog-content] button {
+  border-radius: 12px !important;
+  font-weight: 500 !important;
+  transition: all 0.2s ease !important;
+  min-height: 44px !important;
+}
+
+/* Улучшенные поля ввода */
+[data-radix-react-dialog-content] input,
+[data-radix-react-dialog-content] textarea,
+[data-radix-react-alert-dialog-content] input,
+[data-radix-react-alert-dialog-content] textarea {
+  border-radius: 12px !important;
+  border: 2px solid hsl(var(--border)) !important;
+  padding: 12px 16px !important;
+  font-size: 16px !important;
+  transition: all 0.2s ease !important;
+}
+
+[data-radix-react-dialog-content] input:focus,
+[data-radix-react-dialog-content] textarea:focus,
+[data-radix-react-alert-dialog-content] input:focus,
+[data-radix-react-alert-dialog-content] textarea:focus {
+  border-color: hsl(var(--primary)) !important;
+  box-shadow: 0 0 0 3px hsla(var(--primary), 0.1) !important;
+  outline: none !important;
+}
+
+/* Кнопка закрытия */
+[data-radix-react-dialog-content] button[aria-label="Close"],
+[data-radix-react-alert-dialog-content] button[aria-label="Close"] {
+  position: absolute !important;
+  top: 20px !important;
+  right: 20px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  background: hsl(var(--muted)) !important;
+  border: none !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  z-index: 1 !important;
+}
+
+[data-radix-react-dialog-content] button[aria-label="Close"]:hover,
+[data-radix-react-alert-dialog-content] button[aria-label="Close"]:hover {
+  background: hsl(var(--muted)) !important;
+  transform: scale(1.05) !important;
+}
+
+/* Адаптивные стили для мобильных устройств */
+@media (max-width: 640px) {
+  [data-radix-react-dialog-content],
+  [data-radix-react-alert-dialog-content] {
+    padding: 32px !important;
+    max-width: calc(100vw - 32px) !important;
+    border-radius: 16px !important;
+    max-height: calc(100vh - 32px) !important;
+    top: 50vh !important;
+    left: 50vw !important;
+    transform: translate(-50%, -50%) !important;
+  }
+
+  [data-radix-react-dialog-content] button[aria-label="Close"],
+  [data-radix-react-alert-dialog-content] button[aria-label="Close"] {
+    top: 12px !important;
+    right: 12px !important;
+  }
+}
+
+[data-radix-react-dialog-content] p,
+[data-radix-react-alert-dialog-content] p {
+  margin-bottom: 16px !important;
+  line-height: 1.6 !important;
+}
+
+[data-radix-react-dialog-content] .space-y-4 > *,
+[data-radix-react-alert-dialog-content] .space-y-4 > * {
+  margin-bottom: 16px !important;
+}
+
+[data-radix-react-dialog-content] .space-y-6 > *,
+[data-radix-react-alert-dialog-content] .space-y-6 > * {
+  margin-bottom: 24px !important;
+}
+
+/* Улучшенные отступы для форм */
+[data-radix-react-dialog-content] .space-y-4 > div:last-child,
+[data-radix-react-alert-dialog-content] .space-y-4 > div:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Улучшенные отступы для кнопок */
+[data-radix-react-dialog-content] .flex.gap-2,
+[data-radix-react-dialog-content] .flex.gap-4,
+[data-radix-react-alert-dialog-content] .flex.gap-2,
+[data-radix-react-alert-dialog-content] .flex.gap-4 {
+  margin-top: 24px !important;
+  padding-top: 20px !important;
+  border-top: 1px solid hsl(var(--border)) !important;
+}
+
+/* Стили для темной темы */
+.dark [data-radix-react-dialog-content],
+.dark [data-radix-react-alert-dialog-content] {
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Мобильные устройства - улучшенные отступы */
+@media (max-width: 768px) {
+  [data-radix-react-dialog-overlay],
+  [data-radix-react-alert-dialog-overlay] {
+    padding: 16px !important;
+  }
+
+  [data-radix-react-dialog-content],
+  [data-radix-react-alert-dialog-content] {
+    width: 100% !important;
+    max-width: calc(100vw - 32px) !important;
+    margin: 0 !important;
+    padding: 24px !important;
+    border-radius: 16px !important;
+    max-height: calc(100vh - 32px) !important;
+  }
+}
+
+/* Очень маленькие экраны */
+@media (max-width: 480px) {
+  [data-radix-react-dialog-overlay],
+  [data-radix-react-alert-dialog-overlay] {
+    padding: 12px !important;
+  }
+
+  [data-radix-react-dialog-content],
+  [data-radix-react-alert-dialog-content] {
+    width: 100% !important;
+    max-width: calc(100vw - 24px) !important;
+    padding: 20px !important;
+    border-radius: 12px !important;
+  }
+}
+
+/* Портал для модальных окон - принудительная фиксация */
+[data-radix-portal] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999998 !important;
+  pointer-events: auto !important;
+  overflow: hidden !important;
+}
+
+/* Предотвращение прокрутки фона при открытии модального окна - но разрешаем прокрутку в самом модальном окне */
+body:has([data-radix-react-dialog-overlay]) {
+  overflow: hidden !important;
+}
+
+body:has([data-radix-react-alert-dialog-overlay]) {
+  overflow: hidden !important;
+}
+
+/* Специальные классы для принудительной фиксации модальных окон */
+.force-fixed-modal {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(2px) !important;
+}
+
+/* Упрощаем позиционирование порталов */
+[data-radix-portal] {
+  position: fixed !important;
+  z-index: 999999 !important;
+}
+
+/* Body должен учитывать фиксированные элементы и обеспечивать правильный скролл */
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  /* Обеспечиваем smooth scrolling для всей страницы */
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Prevent horizontal scroll on mobile */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+/* Modal overlay fix */
+.modal-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 99999 !important;
+}
+
+/* Ensure modals appear above header */
+.z-modal {
+  z-index: 9999 !important;
+}
+
+/* Основной контейнер страницы должен правильно обрабатывать фиксированные элементы */
+/* Убираем дублирующие стили body - они уже установлены выше */
+
+/* Обеспечиваем правильное позиционирование футера */
+#root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+/* Основной контент должен занимать доступное пространство */
+.main-content-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Убираем конфликтующие стили */
+.modal-viewport-centered {
+  /* Удаляем принудительное позиционирование */
+}
+
+/* Reduce paint operations */
+.no-paint {
+  pointer-events: none;
+}
+
+/* Красивые отступы и стили для карточек */
+.card-beautiful {
+  padding: 24px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+.card-beautiful:hover {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  transform: translateY(-2px) !important;
+  transition: all 0.2s ease !important;
+}
+
+/* Улучшенные отступы для контейнеров */
+.container-beautiful {
+  padding: 24px !important;
+  margin: 0 auto !important;
+  max-width: 1200px !important;
+}
+
+@media (max-width: 768px) {
+  .container-beautiful {
+    padding: 16px !important;
+  }
+}
+
+/* Улучшенные отступы для секций */
+.section-beautiful {
+  padding: 48px 0 !important;
+}
+
+@media (max-width: 768px) {
+  .section-beautiful {
+    padding: 32px 0 !important;
+  }
+}
+
+/* Красивые отступы для заголовков */
+.heading-beautiful {
+  margin-bottom: 24px !important;
+  line-height: 1.3 !important;
+}
+
+.heading-beautiful.large {
+  margin-bottom: 32px !important;
+}
+
+.heading-beautiful.small {
+  margin-bottom: 16px !important;
+}
+
+/* Улучшенные отступы для текста */
+.text-beautiful {
+  line-height: 1.6 !important;
+  margin-bottom: 16px !important;
+}
+
+.text-beautiful:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Красивые отступы для списков */
+.list-beautiful {
+  padding-left: 20px !important;
+  margin-bottom: 16px !important;
+}
+
+.list-beautiful li {
+  margin-bottom: 8px !important;
+  line-height: 1.5 !important;
+}
+
+.list-beautiful li:last-child {
+  margin-bottom: 0 !important;
+}
+
+/* Улучшенные отступы для таблиц */
+.table-beautiful {
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+}
+
+.table-beautiful th {
+  padding: 16px !important;
+  background-color: hsl(var(--muted)) !important;
+  font-weight: 600 !important;
+  text-align: left !important;
+}
+
+.table-beautiful td {
+  padding: 16px !important;
+  border-top: 1px solid hsl(var(--border)) !important;
+}
+
+/* Красивые отступы для grid контейнеров */
+.grid-beautiful {
+  gap: 24px !important;
+}
+
+@media (max-width: 768px) {
+  .grid-beautiful {
+    gap: 16px !important;
+  }
+}
+
+/* Улучшенные отступы для flex контейнеров */
+.flex-beautiful {
+  gap: 16px !important;
+}
+
+.flex-beautiful.large {
+  gap: 24px !important;
+}
+
+.flex-beautiful.small {
+  gap: 8px !important;
+}
+
+/* Optimize scrolling containers */
+.scroll-optimized {
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  contain: layout style paint;
+}
+
+/* Header padding utilities - обновленные отступы для фиксированных элементов */
+.header-padding {
+  padding-top: 120px; /* Mobile header height - учитывает два ряда элементов */
+}
+
+@media (min-width: 1024px) {
+  .header-padding {
+    padding-top: 100px; /* Desktop header height - один ряд элементов */
+    padding-left: 0; /* Отступ слева не нужен, так как используется lg:ml-64 */
+  }
+}
+
+/* Контент должен иметь отступ от sidebar на десктопе */
+.main-content {
+  margin-left: 0;
+}
+
+@media (min-width: 1024px) {
+  .main-content {
+    margin-left: 16rem; /* 64 * 0.25rem = 16rem */
+  }
+}
+
+/* РАДИКАЛЬНОЕ ФИКСИРОВАННОЕ ПОЗИЦИОНИРОВАНИЕ - ЗАСТАВЛЯЕМ ОСТАТЬСЯ НА МЕСТЕ */
+.sidebar-fixed {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 18rem !important;
+  height: 100vh !important;
+  z-index: 9999 !important;
+  overflow-y: auto !important;
+  transform: translateX(-100%) !important;
+  transition: transform 0.3s ease-in-out !important;
+  will-change: transform !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+  contain: layout style paint !important;
+  /* Принудительно прикрепляем к viewport */
+  margin: 0 !important;
+  padding: 0 !important;
+  transform-origin: top left !important;
+}
+
+/* Мобильная версия - показать sidebar при открытии */
+@media (max-width: 1023px) {
+  .sidebar-fixed.mobile-open {
+    transform: translateX(0) !important;
+  }
+}
+
+/* Десктопная версия - всегда показывать sidebar */
+@media (min-width: 1024px) {
+  .sidebar-fixed {
+    transform: translateX(0) !important;
+    width: 16rem !important;
+  }
+}
+
+/* ФИКСИРОВАННОЕ ПОЗИЦИОНИРОВАНИЕ HEADER */
+.app-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9998;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* На десктопе header должен учитывать ширину sidebar */
+@media (min-width: 1024px) {
+  .app-header {
+    left: 16rem;
+  }
+}
+
+/* ФИКСИРОВАННОЕ ПОЗИЦИОНИРОВАНИЕ */
+.force-fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+}
+
+.force-fixed-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 40;
+}
+
+/* На десктопе хедер должен быть выше сайдбара */
+@media (min-width: 1024px) {
+  .force-fixed-header {
+    z-index: 50;
+  }
+
+  .force-fixed-sidebar {
+    z-index: 30;
+  }
+}
+
+/* На десктопе хедер начинается после сайдбара */
+@media (min-width: 1024px) {
+  .force-fixed-header {
+    left: 16rem;
+  }
+}
+
+/* Отступы для контента под фиксированным хедером */
+.header-padding {
+  padding-top: 7rem !important; /* 112px for mobile header (два ряда) */
+}
+
+@media (min-width: 1024px) {
+  .header-padding {
+    padding-top: 6rem !important; /* 96px for desktop header (один ряд) */
+  }
+}
+
+/* Фиксированный header для всех экранов - дополнительные правила */
+header.app-header {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 40 !important;
+  will-change: transform !important;
+  backdrop-filter: blur(12px) !important;
+  -webkit-backdrop-filter: blur(12px) !important;
+}
+
+/* Header отступ для десктопа - дополнительные правила */
+@media (min-width: 1024px) {
+  header.app-header {
+    left: 16rem !important;
+  }
+}
+
+/* Убираем любые conflicting styles */
+.fixed-element {
+  position: fixed !important;
+}
+
+.header-padding-content {
+  padding-top: 112px; /* Mobile content padding - два ряда в хедере */
+}
+
+@media (min-width: 1024px) {
+  .header-padding-content {
+    padding-top: 96px; /* Desktop content padding - один ряд в хедере */
+  }
+}
+
+:root {
+  --background: 220 13% 91%; /* #E5E7EB - light gray */
+  --foreground: 240 10% 3.9%; /* #0F172A */
+  --muted: 240 4.8% 95.9%; /* #F1F5F9 */
+  --muted-foreground: 240 3.8% 46.1%; /* #64748B */
+  --popover: 0 0% 100%; /* #FFFFFF */
+  --popover-foreground: 240 10% 3.9%; /* #0F172A */
+  --card: 0 0% 100%; /* #FFFFFF */
+  --card-foreground: 240 10% 3.9%; /* #0F172A */
+  --border: 240 5.9% 90%; /* #E2E8F0 */
+  --input: 240 5.9% 90%; /* #E2E8F0 */
+  --primary: 271 81% 56%; /* #A855F7 */
+  --primary-foreground: 0 0% 98%; /* #FAFAFA */
+  --secondary: 240 4.8% 95.9%; /* #F1F5F9 */
+  --secondary-foreground: 240 5.9% 10%; /* #0F172A */
+  --accent: 240 4.8% 95.9%; /* #F1F5F9 */
+  --accent-foreground: 240 5.9% 10%; /* #0F172A */
+  --destructive: 0 84.2% 60.2%; /* #EF4444 */
+  --destructive-foreground: 0 0% 98%; /* #FAFAFA */
+  --ring: 271 81% 56%; /* #A855F7 */
+  --radius: 0.75rem;
+
+  /* Sidebar colors for light mode */
+  --sidebar-background: 0 0% 100%; /* #FFFFFF */
+  --sidebar-foreground: 240 10% 3.9%; /* #0F172A */
+  --sidebar-primary: 271 81% 56%; /* #A855F7 */
+  --sidebar-primary-foreground: 0 0% 98%; /* #FAFAFA */
+  --sidebar-accent: 240 4.8% 95.9%; /* #F1F5F9 */
+  --sidebar-accent-foreground: 240 5.9% 10%; /* #0F172A */
+  --sidebar-border: 240 5.9% 90%; /* #E2E8F0 */
+  --sidebar-ring: 271 81% 56%; /* #A855F7 */
+}
+
+.dark {
+  --background: 240 10% 3.9%; /* #0F172A */
+  --foreground: 0 0% 98%; /* #FAFAFA */
+  --muted: 240 3.7% 15.9%; /* #262626 */
+  --muted-foreground: 240 5% 64.9%; /* #A1A1AA */
+  --popover: 240 10% 3.9%; /* #0F172A */
+  --popover-foreground: 0 0% 98%; /* #FAFAFA */
+  --card: 240 10% 3.9%; /* #0F172A */
+  --card-foreground: 0 0% 98%; /* #FAFAFA */
+  --border: 240 3.7% 15.9%; /* #262626 */
+  --input: 240 3.7% 15.9%; /* #262626 */
+  --primary: 271 81% 56%; /* #A855F7 */
+  --primary-foreground: 0 0% 98%; /* #FAFAFA */
+  --secondary: 240 3.7% 15.9%; /* #262626 */
+  --secondary-foreground: 0 0% 98%; /* #FAFAFA */
+  --accent: 240 3.7% 15.9%; /* #262626 */
+  --accent-foreground: 0 0% 98%; /* #FAFAFA */
+  --destructive: 0 62.8% 30.6%; /* #7F1D1D */
+  --destructive-foreground: 0 0% 98%; /* #FAFAFA */
+  --ring: 271 81% 56%; /* #A855F7 */
+
+  /* Sidebar colors for dark mode */
+  --sidebar-background: 240 5.9% 10%; /* #18181B */
+  --sidebar-foreground: 0 0% 98%; /* #FAFAFA */
+  --sidebar-primary: 271 81% 56%; /* #A855F7 */
+  --sidebar-primary-foreground: 0 0% 98%; /* #FAFAFA */
+  --sidebar-accent: 240 3.7% 15.9%; /* #262626 */
+  --sidebar-accent-foreground: 0 0% 98%; /* #FAFAFA */
+  --sidebar-border: 240 3.7% 15.9%; /* #262626 */
+  --sidebar-ring: 271 81% 56%; /* #A855F7 */
+}
+
+.dark {
+  --background: 220 13% 9%; /* #111827 - dark gray */
+  --foreground: 0 0% 98%; /* #FAFAFA */
+  --muted: 0 0% 15%; /* #262626 */
+  --muted-foreground: 0 0% 60%; /* #999999 */
+  --popover: 0 0% 10%; /* #1A1A1A */
+  --popover-foreground: 0 0% 98%; /* #FAFAFA */
+  --card: 0 0% 10%; /* #1A1A1A */
+  --card-foreground: 0 0% 98%; /* #FAFAFA */
+  --border: 0 0% 20%; /* #333333 */
+  --input: 0 0% 15%; /* #262626 */
+  --primary: 271 81% 56%; /* #A855F7 */
+  --primary-foreground: 0 0% 98%; /* #FAFAFA */
+  --secondary: 0 0% 15%; /* #262626 */
+  --secondary-foreground: 0 0% 98%; /* #FAFAFA */
+  --accent: 0 0% 15%; /* #262626 */
+  --accent-foreground: 0 0% 98%; /* #FAFAFA */
+  --destructive: 0 62.8% 30.6%; /* #991B1B */
+  --destructive-foreground: 0 0% 98%; /* #FAFAFA */
+  --ring: 271 81% 56%; /* #A855F7 */
+
+  /* Sidebar colors for dark mode */
+  --sidebar-background: 0 0% 7%; /* #121212 */
+  --sidebar-foreground: 0 0% 98%; /* #FAFAFA */
+  --sidebar-primary: 271 81% 56%; /* #A855F7 */
+  --sidebar-primary-foreground: 0 0% 98%; /* #FAFAFA */
+  --sidebar-accent: 0 0% 15%; /* #262626 */
+  --sidebar-accent-foreground: 0 0% 98%; /* #FAFAFA */
+  --sidebar-border: 0 0% 20%; /* #333333 */
+  --sidebar-ring: 271 81% 56%; /* #A855F7 */
+
+  /* Chart colors for admin dashboard */
+  --chart-1: 271 81% 56%; /* #A855F7 */
+  --chart-2: 217 91% 60%; /* #3B82F6 */
+  --chart-3: 142 76% 36%; /* #10B981 */
+  --chart-4: 0 84% 60%; /* #EF4444 */
+  --chart-5: 45 93% 47%; /* #F59E0B */
+}
+
+
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  html {
+    /* Default light theme */
+  }
+
+  .light {
+    --background: 220 13% 91%; /* #E5E7EB - light gray */
+    --foreground: 240 10% 3.9%; /* #0F172A */
+    --muted: 240 4.8% 95.9%; /* #F1F5F9 */
+    --muted-foreground: 240 3.8% 46.1%; /* #64748B */
+    --popover: 0 0% 100%; /* #FFFFFF */
+    --popover-foreground: 240 10% 3.9%; /* #0F172A */
+    --card: 0 0% 100%; /* #FFFFFF */
+    --card-foreground: 240 10% 3.9%; /* #0F172A */
+    --border: 240 5.9% 90%; /* #E2E8F0 */
+    --input: 240 5.9% 90%; /* #E2E8F0 */
+    --primary: 271 81% 56%; /* #A855F7 */
+    --primary-foreground: 0 0% 98%; /* #FAFAFA */
+    --secondary: 240 4.8% 95.9%; /* #F1F5F9 */
+    --secondary-foreground: 240 5.9% 10%; /* #0F172A */
+    --accent: 240 4.8% 95.9%; /* #F1F5F9 */
+    --accent-foreground: 240 5.9% 10%; /* #0F172A */
+    --destructive: 0 84.2% 60.2%; /* #EF4444 */
+    --destructive-foreground: 0 0% 98%; /* #FAFAFA */
+    --ring: 271 81% 56%; /* #A855F7 */
+  }
+}
+
+@layer utilities {
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .bg-gray-750 {
+    background-color: #374151;
+  }
+
+  .hover\:bg-gray-750:hover {
+    background-color: #374151;
+  }
+}
+
+/* FontAwesome загружается через HTML */
+
+/* Smooth transitions for interactive elements */
+.transition-colors {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+.transition-transform {
+  transition-property: transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.7);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(75, 85, 99, 0.5);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(75, 85, 99, 0.7);
+}
+
+/* Advanced loading animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 30px rgba(147, 51, 234, 0.6);
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 60px rgba(147, 51, 234, 0.8);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  33% {
+    transform: translateY(-15px) rotate(2deg);
+  }
+  66% {
+    transform: translateY(-5px) rotate(-1deg);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes loading-bar {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0.5;
+  }
+}
+
+@keyframes gradient-flow {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(139, 92, 246, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 20px rgba(139, 92, 246, 0.8));
+  }
+}
+
+@keyframes orbit-plane {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(60px) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) translateX(60px) rotate(360deg);
+  }
+}
+
+@keyframes orbit-plane-large {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(80px) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) translateX(80px) rotate(360deg);
+  }
+}
+
+@keyframes orbit-plane-reverse {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(85px) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) translateX(85px) rotate(360deg);
+  }
+}
+
+@keyframes orbit-plane-large-reverse {
+  0% {
+    transform: translate(-50%, -50%) rotate(0deg) translateX(100px) rotate(0deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) rotate(360deg) translateX(100px) rotate(360deg);
+  }
+}
+
+/* Professional Loading Animations */
+@keyframes professional-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes professional-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes professional-progress {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(100%);
+    opacity: 0.7;
+  }
+}
+
+@keyframes professional-dot {
+  0%, 80%, 100% {
+    transform: scale(0.8);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* Skeleton Shimmer Effect */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  background-size: 200px 100%;
+  animation: skeleton-shimmer 1.5s infinite;
+}
+
+.dark .skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.15) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes wave {
+  0%, 100% {
+    transform: translateX(0%);
+  }
+  50% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+.animate-ripple {
+  animation: ripple 2s ease-out infinite;
+}
+
+.animate-sparkle {
+  animation: sparkle 1.5s ease-in-out infinite;
+}
+
+.animate-wave {
+  animation: wave 3s ease-in-out infinite;
+}
+
+/* Enhanced skeleton loading with shimmer */
+.skeleton-gradient {
+  position: relative;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.3),
+    rgba(255, 255, 255, 0.1)
+  );
+  background-size: 200% 100%;
+  animation: loading 1.8s infinite;
+  overflow: hidden;
+}
+
+.skeleton-gradient::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+.dark .skeleton-gradient {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05),
+    rgba(255, 255, 255, 0.15),
+    rgba(255, 255, 255, 0.05)
+  );
+}
+
+.dark .skeleton-gradient::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+}
+
+@keyframes loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* Hardware acceleration for better performance */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform;
+}
+
+/* Optimized transitions */
+.smooth-transition {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fast-transition {
+  transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Memory-efficient animations */
+.efficient-animate {
+  animation-fill-mode: both;
+  animation-play-state: running;
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .animate-shimmer,
+  .animate-float,
+  .animate-pulse-glow,
+  .animate-gradient,
+  .animate-ripple,
+  .animate-sparkle,
+  .animate-wave {
+    animation: none;
+  }
+
+  .skeleton-gradient::before {
+    animation: none;
+  }
+}
+
+/* Glassmorphism effects */
+.glass {
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Performance optimizations */
+* {
+  will-change: auto;
+}
+
+.page-transition {
+  transition: opacity 0.15s ease-in-out, transform 0.15s ease-in-out;
+}
+
+.page-transition-enter {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+.page-transition-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+/* Optimize scrolling */
+.smooth-scroll {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* GPU acceleration for frequently animated elements */
+.gpu-accelerated {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+/* Toast notifications with viewport positioning - FORCE SCREEN ATTACHMENT */
+.toast-overlay {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
+  transform: translate3d(0, 0, 0) !important;
+  will-change: transform !important;
+}
+
+.toast-overlay > div {
+  position: fixed !important;
+  top: 1rem !important;
+  right: 1rem !important;
+  pointer-events: none !important;
+  transform: translate3d(0, 0, 0) !important;
+}
+
+.toast-overlay > div > div {
+  pointer-events: auto !important;
+  margin-bottom: 8px !important;
+  position: relative !important;
+  transform: translate3d(0, 0, 0) !important;
+}
+
+/* Override any conflicting styles */
+body > div[class*="toast"], 
+body > .toast-overlay,
+#root ~ div[class*="toast"] {
+  position: fixed !important;
+  top: 1rem !important;
+  right: 1rem !important;
+  z-index: 999999 !important;
+}
+
+/* GPU acceleration for smooth positioning */
+.toast-overlay,
+.toast-overlay * {
+  backface-visibility: hidden !important;
+  perspective: 1000px !important;
+}
+
+/* This CSS ensures that the Header and Sidebar are fixed to the screen */

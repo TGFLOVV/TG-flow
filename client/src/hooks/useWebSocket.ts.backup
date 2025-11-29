@@ -1,0 +1,93 @@
+
+import { useEffect, useRef } from 'react';
+import { io, Socket } from 'socket.io-client';
+import { queryClient } from '@/lib/queryClient';
+import { useToast } from '@/contexts/ToastContext';
+
+export function useWebSocket() {
+  const socketRef = useRef<Socket | null>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    // Initialize WebSocket connection
+    socketRef.current = io('/', {
+      transports: ['websocket', 'polling']
+    });
+
+    const socket = socketRef.current;
+
+    socket.on('connect', () => {
+      // Connected to WebSocket server
+    });
+
+    socket.on('disconnect', () => {
+      // Disconnected from WebSocket server
+    });
+
+    // News events
+    socket.on('news_created', (news) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/news'] });
+      toast({
+        title: "Новая новость",
+        description: news.title,
+      });
+    });
+
+    socket.on('news_deleted', (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/news'] });
+    });
+
+    // Channel events
+    socket.on('channel_created', (channel) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/channels'] });
+      toast({
+        title: "Новый канал добавлен",
+        description: channel.name,
+      });
+    });
+
+    socket.on('channel_updated', (channel) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/channels'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/channels/${channel.id}`] });
+    });
+
+    socket.on('channel_deleted', (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/channels'] });
+    });
+
+    // Application events
+    socket.on('application_created', (application) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/applications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/applications'] });
+    });
+
+    socket.on('application_updated', (application) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/applications'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/applications'] });
+    });
+
+    // User events
+    socket.on('user_updated', (user) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/user'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+    });
+
+    // Topup events
+    socket.on('topup_created', (topup) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/topups'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/topup-history'] });
+    });
+
+    socket.on('topup_updated', (topup) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/topups'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/user/topup-history'] });
+    });
+
+    // Cleanup on unmount
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+
+  return socketRef.current;
+}
